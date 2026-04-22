@@ -75,7 +75,10 @@ export default function ProfileSettingsPage() {
     setSaving(false);
     if (!error) {
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      // Redirect after a short delay so they can see the success message
+      setTimeout(() => {
+        router.push("/consultation");
+      }, 1500);
     } else {
       console.error("Error saving profile:", error);
     }

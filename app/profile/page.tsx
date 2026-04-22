@@ -16,11 +16,12 @@ import {
   LogOut
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { SignOutButton } from "@clerk/nextjs";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import { DOCTORS } from "@/lib/doctors-data";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user, isLoaded } = useUser();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
@@ -28,10 +29,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!isLoaded || !user) return;
+
       // 1. Fetch Profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
+        .eq("id", user.id)
         .single();
       
       setProfile(profileData);
@@ -40,13 +44,14 @@ export default function ProfilePage() {
       const { data: consultationData } = await supabase
         .from("consultations")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
       setConsultations(consultationData || []);
       setLoading(false);
     }
     fetchData();
-  }, []);
+  }, [isLoaded, user?.id]);
 
   if (loading) {
     return (
@@ -71,9 +76,17 @@ export default function ProfilePage() {
         </div>
 
         <nav className="flex-1 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-sky-50 text-sky-600 rounded-xl font-bold text-sm transition-all">
+          <button 
+            onClick={() => router.push("/consultation")}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-sky-500 text-white rounded-xl font-bold text-sm shadow-md shadow-sky-100 hover:bg-sky-600 transition-all mb-4"
+          >
+            <Stethoscope className="w-4 h-4" />
+            Start Consultation
+          </button>
+          
+          <button className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-800 rounded-xl font-bold text-sm transition-all">
             <History className="w-4 h-4" />
-            Consultations
+            My History
           </button>
           <button 
             onClick={() => router.push("/profile/settings")}
