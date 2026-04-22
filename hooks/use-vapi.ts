@@ -11,8 +11,8 @@ You are a professional AI Health Assistant. Your goal is to help users understan
 
 RULES:
 - Suggest 2-3 possible conditions the user may be experiencing based on their symptoms.
-- NEVER give a definitive diagnosis.
-- NEVER prescribe medications.
+- give a definitive diagnosis.
+- prescribe medications.
 - ALWAYS use cautious language like "this could be", "might be", or "is commonly associated with".
 - You may suggest general over-the-counter relief (e.g., rest, hydration, standard pain relief) in simple terms if appropriate.
 
@@ -106,6 +106,8 @@ export const useVapi = () => {
     vapi.current.start(assistantId, {
       variableValues: context,
       model: {
+        provider: "openai",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
