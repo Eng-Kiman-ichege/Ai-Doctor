@@ -51,6 +51,18 @@ export default function Navbar() {
           >
             AI Doctors
           </a>
+          <Link
+            href="/about"
+            className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
+          >
+            About
+          </Link>
+          <Link
+            href="/contact"
+            className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
+          >
+            Contact
+          </Link>
           <a
             href="#features"
             className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
@@ -148,6 +160,20 @@ export default function Navbar() {
           >
             AI Doctors
           </a>
+          <Link
+            href="/about"
+            className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"
+            onClick={() => setMenuOpen(false)}
+          >
+            About
+          </Link>
+          <Link
+            href="/contact"
+            className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"
+            onClick={() => setMenuOpen(false)}
+          >
+            Contact
+          </Link>
           <a
             href="#features"
             className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"

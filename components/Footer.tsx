@@ -55,10 +55,10 @@ export default function Footer() {
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Company</h4>
               <ul className="flex flex-col gap-3">
                 {[
-                  { label: "About", href: "#" },
+                  { label: "About", href: "/about" },
+                  { label: "Contact Us", href: "/contact" },
                   { label: "Privacy Policy", href: "#" },
                   { label: "Terms of Service", href: "#" },
-                  { label: "Contact", href: "#" },
                 ].map((link) => (
                   <li key={link.label}>
                     <a
