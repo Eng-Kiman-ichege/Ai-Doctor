@@ -2,87 +2,109 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/utils/supabase/server";
 
-const VAPI_API_KEY = process.env.VAPI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const callId = searchParams.get("callId");
-  const doctorId = searchParams.get("doctorId");
-
-  if (!callId) {
-    return NextResponse.json({ error: "Missing callId" }, { status: 400 });
-  }
-
+export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!VAPI_API_KEY) {
-    return NextResponse.json({ error: "VAPI_API_KEY not configured" }, { status: 500 });
+  if (!OPENROUTER_API_KEY) {
+    return NextResponse.json(
+      { error: "OPENROUTER_API_KEY not configured" },
+      { status: 500 }
+    );
   }
 
   try {
-    let callData: any = null;
-    let attempts = 0;
-    const maxAttempts = 5; // Wait up to 10 seconds total (5 * 2s)
+    const { doctorId, messages } = await req.json();
 
-    // Retry loop to wait for Vapi analysis to complete
-    while (attempts < maxAttempts) {
-      const response = await fetch(`https://api.vapi.ai/call/${callId}`, {
-        headers: {
-          Authorization: `Bearer ${VAPI_API_KEY}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Vapi API error: ${response.statusText}`);
-      }
-
-      callData = await response.json();
-
-      // Check if the analysis (summary/structured data) is ready
-      if (callData.analysis?.summary || callData.analysis?.structuredData) {
-        break;
-      }
-
-      // If not ready, wait 2 seconds and try again
-      attempts++;
-      if (attempts < maxAttempts) {
-        console.log(`Waiting for Vapi analysis... attempt ${attempts}`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: "Invalid messages format" },
+        { status: 400 }
+      );
     }
 
-    if (!callData?.analysis?.summary) {
-      console.warn("Vapi analysis not finalized after retries. Using partial data.");
+    const transcript = messages
+      .map((m: any) => `${m.role === "doctor" ? "Doctor" : "Patient"}: ${m.content}`)
+      .join("\n");
+
+    const systemPrompt = `You are an expert medical AI assisting with post-consultation analysis. Review the following transcript between a patient and an AI doctor.
+Generate a structured JSON report with the following format:
+{
+  "conclusion": "A brief overall medical conclusion (1-2 sentences).",
+  "summary": "A detailed clinical summary of the encounter.",
+  "nextSteps": ["Actionable step 1", "Actionable step 2"]
+}`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://aidoctor.com", // Optional but recommended
+        "X-Title": "AI Doctor Consultation",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Transcript:\n\n${transcript}` }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("OpenRouter API error:", errText);
+      throw new Error(`OpenRouter API error: ${response.statusText}`);
     }
 
-    const conclusion = callData.analysis?.summary || "Clinical analysis was inconclusive.";
-    const summary = callData.analysis?.structuredData?.clinical_overview || "The consultation ended successfully.";
-    const nextSteps = callData.analysis?.structuredData?.recommendations || ["Monitor symptoms", "Rest and recover"];
-    const transcript = callData.transcript || "";
+    const aiData = await response.json();
+    const resultContent = aiData.choices[0]?.message?.content || "{}";
     
-    // 2. Save to Supabase
-    const supabase = await createClient();
-    const { error: dbError } = await supabase
-      .from("consultations")
-      .insert({
-        user_id: userId,
-        doctor_id: doctorId || "aria", // Use internal doctorId from query param
-        symptoms: callData.variableValues?.symptoms || "Brief symptoms update",
-        conclusion,
-        summary,
-        next_steps: nextSteps,
-        transcript,
-        duration_seconds: callData.durationSeconds || 0
-      });
-
-    if (dbError) {
-      console.error("Failed to save consultation:", dbError);
+    let parsedReport;
+    try {
+      parsedReport = JSON.parse(resultContent);
+    } catch (e) {
+      console.warn("Failed to parse OpenRouter output as JSON. Using fallback.");
+      parsedReport = {
+        conclusion: "Clinical analysis was inconclusive.",
+        summary: "The consultation ended.",
+        nextSteps: ["Monitor symptoms"]
+      };
     }
 
-    // 3. Return report
+    const conclusion = parsedReport.conclusion || "Check-up complete.";
+    const summary = parsedReport.summary || "Consultation successfully summarized.";
+    const nextSteps = parsedReport.nextSteps || ["Monitor your symptoms"];
+    
+    // Attempt to save to Supabase
+    try {
+      const supabase = await createClient();
+      const { error: dbError } = await supabase
+        .from("consultations")
+        .insert({
+          user_id: userId,
+          doctor_id: doctorId || "aria", 
+          symptoms: "Discussed in consultation", 
+          conclusion,
+          summary,
+          next_steps: nextSteps,
+          transcript,
+          duration_seconds: messages.length * 10 // rough estimate
+        });
+
+      if (dbError) {
+        console.error("Failed to save consultation to Supabase:", dbError);
+      }
+    } catch (dbErr) {
+      console.error("Supabase Save Error:", dbErr);
+    }
+
     return NextResponse.json({
       conclusion,
       summary,
@@ -91,6 +113,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("Report generation error:", error);
-    return NextResponse.json({ error: "Failed to generate report" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate report" },
+      { status: 500 }
+    );
   }
 }

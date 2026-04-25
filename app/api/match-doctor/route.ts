@@ -46,9 +46,12 @@ export async function POST(req: Request) {
         "X-Title": "AI Doctor Pro",
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-4-340b-instruct", // High quality NVIDIA model on OR
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+        model: "openai/gpt-4o-mini",
+        messages: [
+          { role: "system", content: prompt },
+          { role: "user", content: `Symptoms: ${symptoms}\nDuration: ${duration}\nSeverity: ${severity}/10` }
+        ],
+        temperature: 0.3,
       }),
     });
 

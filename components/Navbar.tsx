@@ -63,20 +63,18 @@ export default function Navbar() {
           >
             Contact
           </Link>
-          <a
-            href="#features"
+          <Link
+            href="/features"
             className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
           >
             Features
-          </a>
-          <SignedIn>
-            <Link
-              href="/profile"
-              className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
-            >
-              Medical Hub
-            </Link>
-          </SignedIn>
+          </Link>
+          <Link
+            href="/profile"
+            className="text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors duration-200"
+          >
+            Medical Hub
+          </Link>
         </div>
 
         {/* CTA + Mobile Toggle */}
@@ -174,22 +172,20 @@ export default function Navbar() {
           >
             Contact
           </Link>
-          <a
-            href="#features"
+          <Link
+            href="/features"
             className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"
             onClick={() => setMenuOpen(false)}
           >
             Features
-          </a>
-          <SignedIn>
-            <Link
-              href="/profile"
-              className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Medical Hub
-            </Link>
-          </SignedIn>
+          </Link>
+          <Link
+            href="/profile"
+            className="text-sm font-medium text-slate-700 hover:text-sky-600 py-2 transition-colors"
+            onClick={() => setMenuOpen(false)}
+          >
+            Medical Hub
+          </Link>
           <Link
             href="/consultation"
             className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white text-sm font-semibold px-5 py-3 rounded-full shadow-md mt-1"
